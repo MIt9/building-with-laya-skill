@@ -8,6 +8,21 @@
       "name": "laya",
       "source": "./plugins/laya",
       "description": "A skill for writing and improving programs that call Laya and laya-cli — local, typed decisions with Choice/Score/Noul."
+    },
+    {
+      "name": "laya-browser-use",
+      "source": "./plugins/laya-browser-use",
+      "description": "Fast browser actions with local Laya via laya-cli — no API key, no network for decisions. Requires Computer Use and laya-cli."
+    },
+    {
+      "name": "subagents",
+      "source": "./plugins/subagents",
+      "description": "Orchestrator/subagent coordination workflow using Claude Code's Agent tool (fork, subagent_type, isolation, ListAgents, SendMessage). Use only when the user asks for subagents."
+    },
+    {
+      "name": "laya-model-routing",
+      "source": "./plugins/laya-model-routing",
+      "description": "Pick the cheapest model that's good enough for a task using local Laya (difficulty/kind/risk in one request) before delegating work or spawning a subagent."
     }
   ]
 }

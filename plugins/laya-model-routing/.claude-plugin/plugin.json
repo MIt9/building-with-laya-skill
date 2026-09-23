@@ -1,0 +1,9 @@
+{
+  "name": "laya-model-routing",
+  "description": "Pick the cheapest model that's good enough for a task using local Laya (difficulty/kind/risk in one request) before delegating work or spawning a subagent.",
+  "version": "0.1.0",
+  "author": {
+    "name": "MIt9"
+  },
+  "repository": "https://github.com/MIt9/building-with-laya-skill"
+}

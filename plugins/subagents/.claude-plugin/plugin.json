@@ -1,0 +1,9 @@
+{
+  "name": "subagents",
+  "description": "Orchestrator/subagent coordination workflow using Claude Code's Agent tool (fork, subagent_type, isolation, ListAgents, SendMessage). Use only when the user asks for subagents.",
+  "version": "0.1.0",
+  "author": {
+    "name": "MIt9"
+  },
+  "repository": "https://github.com/MIt9/building-with-laya-skill"
+}

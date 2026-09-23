@@ -6,6 +6,12 @@ The skill covers question design (Choice, Score, Noul), state structure, answer 
 
 The skill lives in [`plugins/laya/skills/laya/SKILL.md`](plugins/laya/skills/laya/SKILL.md). The standalone CLI it wraps is [`MIt9/laya-cli`](https://github.com/MIt9/laya-cli) (`uv tool install laya-cli`).
 
+This repo also ships:
+
+- [`laya-browser-use`](plugins/laya-browser-use/skills/laya-browser-use/SKILL.md): action-heavy browser automation (navigation, clicks, toggles, scrolling) driven by local Laya through a Computer Use runtime — a fork of [`wy-coliney/jev-browser-use`](https://github.com/wy-coliney/jev-browser-use) with the cloud Jev API swapped for a local `laya-cli predict` call, so it needs no API key and makes no network call for decisions.
+- [`subagents`](plugins/subagents/skills/subagents/SKILL.md): orchestrator/subagent coordination for Claude Code's own Agent tool (fork vs named `subagent_type`, `isolation`, `ListAgents`/`SendMessage`) — a fork of [`dobroslavradosavljevic/skills`](https://github.com/dobroslavradosavljevic/skills)' `subagents` skill, adapted to this harness's actual tools and its "only spawn when asked" default.
+- [`laya-model-routing`](plugins/laya-model-routing/skills/laya-model-routing/SKILL.md): pick the cheapest model good enough for a task by asking local Laya its difficulty/kind/risk in one request — a fork of [`kerpopule/hermes-jev-skills`](https://github.com/kerpopule/hermes-jev-skills)' `jev-model-routing` skill, stripped of the Hermes fleet plugin and its catalog/pricing tooling down to the host-agnostic idea.
+
 This repo is a [plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces) — each skill lives in its own `plugins/<name>/` folder with its own `plugin.json`, listed in [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
 
 ## Install
@@ -17,6 +23,9 @@ Run these two commands inside Claude Code:
 ```
 /plugin marketplace add MIt9/building-with-laya-skill
 /plugin install laya@building-with-laya
+/plugin install laya-browser-use@building-with-laya   # optional, needs Computer Use
+/plugin install subagents@building-with-laya           # optional, no Laya dependency
+/plugin install laya-model-routing@building-with-laya  # optional
 ```
 
 *Replace `MIt9/building-with-laya-skill` with your fork if you forked the repo.*
@@ -75,3 +84,6 @@ If you are porting a Jev program, keep the 7-step workflow and the diagnosis tab
 - Laya upstream: https://github.com/NandhaKishorM/laya
 - `laya-cli` (this skill's CLI): https://github.com/MIt9/laya-cli
 - This skill adapts the structure of [`dbreunig/building-with-jev-skill`](https://github.com/dbreunig/building-with-jev-skill) `skills/jev/SKILL.md` (workflow, primitives, criteria, diagnosis, checklist) for Laya.
+- `laya-browser-use` is a fork of [`wy-coliney/jev-browser-use`](https://github.com/wy-coliney/jev-browser-use) (MIT) with the cloud Jev/TypeSafe transport replaced by a local `laya-cli predict` subprocess call.
+- `subagents` is a fork of [`dobroslavradosavljevic/skills`](https://github.com/dobroslavradosavljevic/skills) (MIT), retargeted from generic/proactive dispatch guidance to Claude Code's actual Agent tool and its conservative default.
+- `laya-model-routing` is a fork of [`kerpopule/hermes-jev-skills`](https://github.com/kerpopule/hermes-jev-skills) (MIT) `jev-model-routing`, with the Hermes plugin and fleet-pricing tooling dropped down to the portable Laya-based routing idea.

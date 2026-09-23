@@ -1,0 +1,9 @@
+{
+  "name": "laya-browser-use",
+  "description": "Fast browser actions with local Laya via laya-cli — no API key, no network for decisions. Requires Computer Use and laya-cli.",
+  "version": "0.1.0",
+  "author": {
+    "name": "MIt9"
+  },
+  "repository": "https://github.com/MIt9/building-with-laya-skill"
+}
