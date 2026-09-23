@@ -125,12 +125,12 @@ pip install laya-cli
 uvx laya-cli --help                    # run without installing
 uvx --refresh laya-cli@latest --help   # bypass uv cache
 
-# From source (this repo's CLI is at https://github.com/MIt9/laya-cli)
+# From source
 git clone https://github.com/MIt9/laya-cli
 uv sync --group dev && uv run laya-cli --help
 ```
 
-> Requires Python 3.10+ (`.python-version` pins 3.11). Heavy ML deps are pulled via `laya` — first run downloads weights; `HF_HUB_OFFLINE=1` afterwards. Dev/tests mock Laya so CI is fast without a model.
+> Requires Python 3.10+. Heavy ML deps are pulled via `laya` — first run downloads weights; `HF_HUB_OFFLINE=1` afterwards.
 
 Check: `laya-cli --version` (current `0.2.x`), `laya-cli info` (python/torch/cuda/mps + HF cache), `laya-cli questions list`.
 
@@ -241,7 +241,7 @@ laya-cli info        # shows python/torch/cuda/mps + HF cache; device auto is cu
 
 If `uvx` is used, bypass cache: `uvx --refresh laya-cli --help` (otherwise `uvx laya-cli --help` may show cached `0.1.0` without `serve`).
 
-**Transport — HTTP on loopback only (as in `~/.claude/skills/laya-integration/SKILL.md` “HTTP sidecar”):**
+**Transport — HTTP sidecar, loopback only:**
 
 HTTP on `127.0.0.1` only, never `0.0.0.0`. Single-threaded with `threading.Lock` (one GPU = one forward pass, concurrent calls are serialized):
 
@@ -297,7 +297,7 @@ laya-cli serve stop
 seq 1 5 | xargs -P5 -I{} laya-cli predict "text {}" --preset guard --format json
 ```
 
-**Security / limits:** binds only `127.0.0.1`, no auth (single-user local machine, as in SKILL.md), one request at a time, stateless apart from the model in RAM, no multi-model hot-swap (new config = new daemon on another port). If you see `[laya-cli] model ... loaded in 37.8s` after `serve --device mps`, the client hash mismatched (before the `0.2.2` fix: raw `--device` vs auto); update to `laya-cli >=0.2.2` where device is resolved before hashing.
+**Security / limits:** binds only `127.0.0.1`, no auth (single-user local machine), one request at a time, stateless apart from the model in RAM, no multi-model hot-swap (new config = new daemon on another port). If you see `[laya-cli] model ... loaded in 37.8s` after `serve --device mps`, the client hash mismatched (before the `0.2.2` fix: raw `--device` vs auto); update to `laya-cli >=0.2.2` where device is resolved before hashing.
 
 ## Compose the answers in code
 
@@ -309,7 +309,7 @@ Composite scoring: split a complex judgment into one Score per dimension, normal
 
 Intent routing: Choice for intent + Score for complexity; route each intent to deterministic code, a specialist LLM, or a person; send low-confidence to a person.
 
-Taxonomy walk / counting / dates / extraction: same patterns as Jev — one Choice per tree level, one Noul per item then sum, one Choice per date part then assemble in code, regex/LLM generates candidates then Choice/Noul verifies.
+Taxonomy walk / counting / dates / extraction: one Choice per tree level, one Noul per item then sum, one Choice per date part then assemble in code, regex/LLM generates candidates then Choice/Noul verifies.
 
 ```python
 from laya import Router
@@ -343,7 +343,7 @@ cat tickets.jsonl | laya-cli predict --questions questions.json --format jsonl >
 
 - `score` is probability-weighted mean of levels. `1.0` can mean certainty on `1` or split `0`+`2` — read `probabilities`.
 - Threshold a score, rank by it, or round it — do not interpolate a quantity. Levels are weakly calibrated as numbers.
-- `confidence` is `1 - normalized entropy` — peaked = high. F841. For `noul`, use `max(p,1-p)` or distance from 0.5. Every answer stays inside the options you supplied.
+- `confidence` is `1 - normalized entropy` — peaked = high. For `noul`, use `max(p,1-p)` or distance from 0.5. Every answer stays inside the options you supplied.
 - `usage.input_tokens` reports tokens consumed. `answers[*].action.act_probability` is the act-or-escalate head.
 - `laya-cli predict --format json` returns `{answers, usage, routing?}`; `classify --flatten` expands to `{qid, qid_p, qid_confidence, qid_probs?, qid_score}`.
 
@@ -387,6 +387,5 @@ Rules: judge a revision on labeled data (higher confidence alone is not better);
 ## Sources
 
 - Laya upstream: https://github.com/NandhaKishorM/laya, checkpoints `convaiinnovations/laya` (English 512), `laya-multilingual` (1024, 322M), `laya-typed-decisions`; `laya.predict_shortlist` + `embed_fn_from_agent` for high-cardinality
-- This repo's CLI: `laya-cli` (`uv tool install laya-cli`, `src/laya_cli/cli.py:1`, `src/laya_cli/daemon.py:1`) — `predict`/`classify`/`filter`/`serve`/`evaluate`/`questions`/`info`
-- Laya integration skill (local): `~/.claude/skills/laya-integration/SKILL.md` — device, warmup, Router, calibration, and sidecar pattern that `serve` implements
-- Jev patterns this skill adapts: confidence-gated routing, composite scoring, intent routing, taxonomy walk, counting, dates, extraction (see `building-with-jev-skill` `skills/jev/SKILL.md` structure)
+- `laya-cli`: https://github.com/MIt9/laya-cli (`uv tool install laya-cli`) — `predict`/`classify`/`filter`/`serve`/`evaluate`/`questions`/`info`
+- This skill adapts the workflow, primitives, criteria, diagnosis table, and checklist structure of [`dbreunig/building-with-jev-skill`](https://github.com/dbreunig/building-with-jev-skill) `skills/jev/SKILL.md` for Laya's decision-routing patterns: confidence-gated routing, composite scoring, intent routing, taxonomy walk, counting, dates, extraction

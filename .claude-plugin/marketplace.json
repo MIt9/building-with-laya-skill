@@ -1,0 +1,13 @@
+{
+  "name": "building-with-laya",
+  "owner": {
+    "name": "MIt9"
+  },
+  "plugins": [
+    {
+      "name": "laya",
+      "source": "./plugins/laya",
+      "description": "A skill for writing and improving programs that call Laya and laya-cli — local, typed decisions with Choice/Score/Noul."
+    }
+  ]
+}

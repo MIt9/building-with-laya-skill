@@ -4,7 +4,9 @@ This repo holds an agent skill for writing and improving programs that call **La
 
 The skill covers question design (Choice, Score, Noul), state structure, answer composition in code, confidence thresholds and calibration, `laya-cli` usage (`predict` / `classify` / `filter` / `serve` daemon / `evaluate` / `shortlist` / `Router`), and diagnosis of questions that answer wrong or with low confidence. It targets the current Laya checkpoints (`convaiinnovations/laya`, `laya-multilingual`, `laya-typed-decisions`) and `laya-cli` `0.2.x`.
 
-The skill lives in [`skills/laya/SKILL.md`](skills/laya/SKILL.md). The standalone CLI it wraps is [`MIt9/laya-cli`](https://github.com/MIt9/laya-cli) (`uv tool install laya-cli`).
+The skill lives in [`plugins/laya/skills/laya/SKILL.md`](plugins/laya/skills/laya/SKILL.md). The standalone CLI it wraps is [`MIt9/laya-cli`](https://github.com/MIt9/laya-cli) (`uv tool install laya-cli`).
+
+This repo is a [plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces) — each skill lives in its own `plugins/<name>/` folder with its own `plugin.json`, listed in [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
 
 ## Install
 
@@ -33,7 +35,7 @@ Copy the skill folder into your personal skills directory:
 
 ```
 git clone https://github.com/MIt9/building-with-laya-skill
-cp -r building-with-laya-skill/skills/laya ~/.claude/skills/laya
+cp -r building-with-laya-skill/plugins/laya/skills/laya ~/.claude/skills/laya
 ```
 
 ## Use
@@ -71,6 +73,5 @@ If you are porting a Jev program, keep the 7-step workflow and the diagnosis tab
 ## Sources
 
 - Laya upstream: https://github.com/NandhaKishorM/laya
-- `laya-cli` (this skill's CLI): https://github.com/MIt9/laya-cli — `src/laya_cli/cli.py`, `src/laya_cli/daemon.py`
-- Laya integration skill (local): `~/.claude/skills/laya-integration/SKILL.md` (device, warmup, Router, calibration, sidecar pattern)
+- `laya-cli` (this skill's CLI): https://github.com/MIt9/laya-cli
 - This skill adapts the structure of [`dbreunig/building-with-jev-skill`](https://github.com/dbreunig/building-with-jev-skill) `skills/jev/SKILL.md` (workflow, primitives, criteria, diagnosis, checklist) for Laya.
