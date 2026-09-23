@@ -1,0 +1,9 @@
+{
+  "name": "laya",
+  "description": "A skill for writing and improving programs that call Laya and laya-cli — local, typed decisions with Choice/Score/Noul.",
+  "version": "0.1.0",
+  "author": {
+    "name": "MIt9"
+  },
+  "repository": "https://github.com/MIt9/building-with-laya-skill"
+}
