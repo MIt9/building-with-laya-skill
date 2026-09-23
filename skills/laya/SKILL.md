@@ -99,6 +99,41 @@ A bare `["billing", "technical"]` works, but `{"billing": "invoices, payments, r
 - Budget: English `head_max_len=192` / `max_len=512`, multilingual `256`/`1024` (up to 8192). State + longest single question must fit. Large state hides signal.
 - Treat state text as able to steer the answer. Laya does not treat state as hostile. State in criteria what counts and test injected content.
 
+## Install
+
+### Python SDK (`pip install laya` — for in-process services)
+
+```bash
+pip install laya  # pulls torch, transformers, safetensors, huggingface_hub
+# first call downloads ~650-850 MB per checkpoint (allow_patterns), 2.3 GB for bundle root
+# afterwards HF_HUB_OFFLINE=1 works
+```
+
+### laya-cli (`uv tool install laya-cli` — for shell, batch JSONL, and the resident daemon)
+
+`laya-cli` is the ergonomic CLI wrapper around the same checkpoints. It exposes the same `Choice`/`Score`/`Noul` semantics as the Python SDK, plus streaming batch mode and `serve`.
+
+```bash
+# Recommended: globally isolated, uses uv.lock
+uv tool install laya-cli
+laya-cli --help
+laya-cli predict "hello" --preset guard --format json
+
+# Alternatives
+pipx install laya-cli
+pip install laya-cli
+uvx laya-cli --help                    # run without installing
+uvx --refresh laya-cli@latest --help   # bypass uv cache
+
+# From source (this repo's CLI is at https://github.com/MIt9/laya-cli)
+git clone https://github.com/MIt9/laya-cli
+uv sync --group dev && uv run laya-cli --help
+```
+
+> Requires Python 3.10+ (`.python-version` pins 3.11). Heavy ML deps are pulled via `laya` — first run downloads weights; `HF_HUB_OFFLINE=1` afterwards. Dev/tests mock Laya so CI is fast without a model.
+
+Check: `laya-cli --version` (current `0.2.x`), `laya-cli info` (python/torch/cuda/mps + HF cache), `laya-cli questions list`.
+
 ## Via Python SDK (direct)
 
 ```bash
@@ -191,20 +226,78 @@ laya-cli evaluate --questions questions.json --labeled labeled.jsonl --label-fie
 # -> accuracy per question, passing@threshold, precision@threshold, escalation rate
 ```
 
-### Resident daemon (optional, for iterative tuning)
+### Resident daemon — `laya-cli serve` (optional, for iterative tuning and agents)
 
-`laya.load()` costs 10-35 s (MPS). `laya-cli serve` keeps the model resident; subsequent `predict`/`classify`/`evaluate` with the **same config** (`model|subfolder|device|router|lang` → `~/.cache/laya-cli/daemons/<hash>.json`, `device` resolved `cuda>mps>cpu` before hashing) hit `127.0.0.1` and skip the load (<1 ms).
+**Why:** `laya.load()` costs 10-35 s on MPS (measured 2026-09-22, 82 candidates: `px` 9.3s + `laya.load()` 10-35s + inference ~10s + filter 0.08s). One pipeline run is fine; iterative tuning of `questions.json` (`predict` → inspect → edit → `predict` again) pays 10-35 s every time for the same checkpoint. The daemon loads once and stays resident — subsequent `predict`/`classify`/`evaluate` skip the load.
+
+**Install check (do this first):**
 
 ```bash
-laya-cli serve --device mps &                 # background, writes pid+port file
-laya-cli serve status                         # GET /status → {model,device,loaded_at,idle_seconds,requests_served,pid,port}
-laya-cli predict "hello" --preset guard --format json  # via daemon, no load
-laya-cli predict "hello" --preset guard --no-daemon --format json  # force in-process
-laya-cli serve stop; laya-cli serve stop --all # graceful POST /shutdown or SIGTERM
-# HTTP also: POST /predict {"state":..., "questions":{...}}, GET /status, POST /shutdown — only 127.0.0.1, Lock-serialized
+uv tool install laya-cli --force --refresh  # or pipx install laya-cli
+laya-cli --version   # -> 0.2.x
+laya-cli serve --help
+laya-cli info        # shows python/torch/cuda/mps + HF cache; device auto is cuda>mps>cpu
 ```
 
-`--idle-timeout 1800` default, `0` disables. Warmup throwaway `predict` before serving. If no daemon, commands silently fall back to in-process — no pipeline change.
+If `uvx` is used, bypass cache: `uvx --refresh laya-cli --help` (otherwise `uvx laya-cli --help` may show cached `0.1.0` without `serve`).
+
+**Transport — HTTP on loopback only (as in `~/.claude/skills/laya-integration/SKILL.md` “HTTP sidecar”):**
+
+HTTP on `127.0.0.1` only, never `0.0.0.0`. Single-threaded with `threading.Lock` (one GPU = one forward pass, concurrent calls are serialized):
+
+- `POST /predict` — `{"state": ..., "questions": {...}, "lang": "...", "shortlist_k": 20}` → same JSON as `agent.predict()` (`laya-cli predict --format json` returns `{answers, usage, routing?}`)
+- `GET /status` — `{"model": "...", "subfolder": "...", "device": "mps", "loaded_at": 123..., "idle_seconds": 42, "requests_served": 17, "pid": 12345, "port": 8765, "idle_timeout": 1800}`
+- `POST /shutdown` — graceful stop from localhost only (also `serve stop` sends `SIGTERM` via pid file)
+
+**Lifecycle — one daemon per checkpoint config:**
+
+Config is hashed as `hash(model|subfolder|device|router|lang)` where `device` is *resolved* before hashing (`auto: cuda>mps>cpu`, explicit `--device mps` that resolves to `mps` shares the file with auto `mps`; explicit `--device cpu` does not). The pid+port are written atomically to `~/.cache/laya-cli/daemons/<12hex>.json` and removed on exit.
+
+```bash
+# Start in background (writes pid+port file, warmup throwaway predict before serving)
+laya-cli serve --model convaiinnovations/laya --device mps
+laya-cli serve --model convaiinnovations/laya --subfolder multilingual --device cpu --idle-timeout 60
+laya-cli serve --router --foreground --idle-timeout 0 --port 8765  # foreground for logs, 0 disables idle
+
+# One daemon = one checkpoint config hash(model|subfolder|device|router|lang) → separate file/port
+laya-cli serve status                                          # default config (same defaults as predict)
+laya-cli serve status --model convaiinnovations/laya --subfolder multilingual --device cpu
+laya-cli serve stop                                            # graceful via POST /shutdown, removes pid file
+laya-cli serve stop --all                                      # stop all daemons
+curl http://127.0.0.1:<port>/status
+curl -X POST http://127.0.0.1:<port>/predict -H 'Content-Type: application/json' -d '{"state":"hi","questions":{"q1":{"type":"noul","instructions":"Is it good?"}}}'
+```
+
+Warmup throwaway `predict` runs before serving. `idle-timeout` defaults to 1800 s; `--idle-timeout 5` (for tests) makes the daemon exit after ~5 s of no requests and `serve status` then reports `not running`. `--foreground` blocks and logs to stderr; without it the daemon forks to background and logs to `~/.cache/laya-cli/daemons/<hash>.log`.
+
+**Client side — automatic, no pipeline change:**
+
+Before `laya.load()`, `predict`/`classify`/`evaluate` check `~/.cache/laya-cli/daemons/<hash>.json` for the current config. If the file exists and the daemon answers `GET /status`, requests go to `POST /predict` instead of a local load. If the file is missing or the daemon is dead (stale pid), they silently fall back to in-process behaviour.
+
+- `--no-daemon` forces in-process even if a daemon is live (for reproducibility/debugging).
+- For batch (`classify`, `predict --input`), each JSONL line is a separate `POST /predict` in a loop (loopback overhead is milliseconds; no batch endpoint needed).
+
+```bash
+# AI workflow — fully automatic, no extra flags after serve:
+laya-cli serve --device mps &                          # once per session
+laya-cli predict "hello" --preset guard --format json  # via daemon, no 10-35s load (stderr: using daemon 127.0.0.1:XXXX)
+laya-cli predict "hello2" --preset guard --format json # still via daemon (<1 ms overhead)
+laya-cli serve status                                  # {"loaded_at":..., "requests_served": 2}
+laya-cli predict "hello" --preset guard --no-daemon --format json  # force in-process (10-35s again)
+laya-cli serve stop
+
+# Human tuning loop:
+laya-cli serve &
+cat candidates.jsonl | laya-cli classify --questions q.json | laya-cli filter --where "on_topic>=0.4" --sort -on_topic  # via daemon
+# ...edit q.json...
+cat candidates.jsonl | laya-cli classify --questions q.json | laya-cli filter --where "on_topic>=0.4" --sort -on_topic  # still via daemon
+laya-cli serve stop
+
+# 5 parallel predicts — serialized by daemon Lock, all succeed with correct, non-interleaved results:
+seq 1 5 | xargs -P5 -I{} laya-cli predict "text {}" --preset guard --format json
+```
+
+**Security / limits:** binds only `127.0.0.1`, no auth (single-user local machine, as in SKILL.md), one request at a time, stateless apart from the model in RAM, no multi-model hot-swap (new config = new daemon on another port). If you see `[laya-cli] model ... loaded in 37.8s` after `serve --device mps`, the client hash mismatched (before the `0.2.2` fix: raw `--device` vs auto); update to `laya-cli >=0.2.2` where device is resolved before hashing.
 
 ## Compose the answers in code
 
