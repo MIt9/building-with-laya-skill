@@ -1,5 +1,7 @@
 # Building with Laya
 
+> **Write reliable AI decision code with Laya** — agent skill for Choice/Score/Noul, question design, `laya-cli` usage and calibration.
+
 This repo holds an agent skill for writing and improving programs that call **Laya** and **`laya-cli`** — Convai's local, non-generative System-1 decision model (Choice/Score/Noul). It is the Laya counterpart to [`dbreunig/building-with-jev-skill`](https://github.com/dbreunig/building-with-jev-skill) (TypeSafe Jev `jev-1.13`).
 
 The skill covers question design (Choice, Score, Noul), state structure, answer composition in code, confidence thresholds and calibration, `laya-cli` usage (`predict` / `classify` / `filter` / `serve` daemon / `evaluate` / `shortlist` / `Router`), and diagnosis of questions that answer wrong or with low confidence. It targets the current Laya checkpoints (`convaiinnovations/laya`, `laya-multilingual`, `laya-typed-decisions`) and `laya-cli` `0.2.x`.
